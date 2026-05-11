@@ -6,7 +6,8 @@ st.set_page_config(page_title="Air Quality Cloud Dashboard")
 
 st.title("🌍 Air Quality Cloud Intelligence System")
 
-API_URL = "https://air-quality-ai-system.onrender.com"
+# ✅ FIXED API URL (VERY IMPORTANT)
+API_URL = "https://air-quality-ai-system.onrender.com/predict"
 
 # -----------------------------
 # INPUTS
@@ -29,19 +30,30 @@ data = {
 # -----------------------------
 if st.button("Predict via Cloud API 🚀"):
 
-    response = requests.post(API_URL, json=data)
+    try:
+        response = requests.post(API_URL, json=data, timeout=10)
+        result = response.json()
 
-    result = response.json()
+        st.write(result)
 
-    st.subheader("Prediction Result")
+        st.subheader("Prediction Result")
 
-    if result["prediction"] == 0:
-        st.success("🟢 Low Risk")
-    elif result["prediction"] == 1:
-        st.warning("🟠 Medium Risk")
-    else:
-        st.error("🔴 High Risk")
+        # ✅ SAFE CHECK (prevents KeyError crash)
+        if result and isinstance(result, dict) and "prediction" in result:
 
-    if result["probabilities"]:
-        st.write("Probabilities:")
-        st.bar_chart(pd.DataFrame(result["probabilities"]))
+            if result["prediction"] == 0:
+                st.success("🟢 Low Risk")
+            elif result["prediction"] == 1:
+                st.warning("🟠 Medium Risk")
+            else:
+                st.error("🔴 High Risk")
+
+            if "probabilities" in result and result["probabilities"]:
+                st.write("Probabilities:")
+                st.bar_chart(pd.DataFrame(result["probabilities"]))
+
+        else:
+            st.error("Invalid response from API")
+
+    except Exception as e:
+        st.error(f"API request failed: {e}")
