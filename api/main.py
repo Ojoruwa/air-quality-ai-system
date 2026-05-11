@@ -4,19 +4,16 @@ import numpy as np
 from pydantic import BaseModel
 import logging
 
-# -----------------------------
-# APP INIT
-# -----------------------------
+from api.database import init_db, save_prediction
+
 app = FastAPI()
 
 # -----------------------------
-# LOGGING (PRODUCTION FEATURE)
+# INIT SYSTEMS
 # -----------------------------
 logging.basicConfig(level=logging.INFO)
+init_db()
 
-# -----------------------------
-# LOAD MODEL
-# -----------------------------
 model = joblib.load("api/model.pkl")
 
 # -----------------------------
@@ -33,23 +30,22 @@ class InputData(BaseModel):
     WindSpeed: float
 
 # -----------------------------
-# HEALTH CHECK (PRODUCTION)
+# HEALTH CHECK
 # -----------------------------
 @app.get("/")
 def home():
-    return {"status": "API running"}
+    return {"status": "running"}
 
 @app.get("/health")
 def health():
     return {"status": "healthy"}
 
 # -----------------------------
-# PREDICT ENDPOINT
+# PREDICT + LOG + STORE (MLOPS CORE)
 # -----------------------------
 @app.post("/predict")
 def predict(data: InputData):
 
-    # Convert input to model format
     features = np.array([[
         data.PM10,
         data.PM2_5,
@@ -61,17 +57,21 @@ def predict(data: InputData):
         data.WindSpeed
     ]])
 
-    # Prediction
-    prediction = model.predict(features)[0]
+    prediction = int(model.predict(features)[0])
     probabilities = model.predict_proba(features)[0].tolist()
 
     # -----------------------------
-    # LOGGING (PRODUCTION MONITORING)
+    # LOGGING
     # -----------------------------
     logging.info(f"Input: {data.dict()}")
     logging.info(f"Prediction: {prediction}")
 
+    # -----------------------------
+    # SAVE TO DATABASE (MLOPS CORE)
+    # -----------------------------
+    save_prediction(data.dict(), prediction)
+
     return {
-        "prediction": int(prediction),
+        "prediction": prediction,
         "probabilities": probabilities
     }
