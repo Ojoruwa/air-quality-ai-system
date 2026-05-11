@@ -6,7 +6,7 @@ st.set_page_config(page_title="Air Quality Cloud Dashboard")
 
 st.title("🌍 Air Quality Cloud Intelligence System")
 
-API_URL = "http://localhost:8000/predict"
+API_URL = "https://air-quality-ai-system.onrender.com"
 
 # -----------------------------
 # INPUTS
